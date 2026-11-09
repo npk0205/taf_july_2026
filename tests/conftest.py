@@ -25,25 +25,64 @@ def read_config(request):
 
     return config,dir_path
 
+# ============================================================
+# Spark Session Fixture
+# ============================================================
+
 @pytest.fixture(scope="session")
 def spark_session():
-    taf_path = os.path.dirname(
-        os.path.dirname(
-            os.path.abspath(__file__)
-        )
+    print("this spark session")
+
+    taf_july = os.path.dirname(os.path.dirname( os.path.abspath(__file__)))
+
+    azure_storage = os.path.join(taf_july,"jars","azure-storage-8.6.6.jar")
+
+    hadoop_azure = os.path.join(taf_july,"jars","hadoop-azure-3.3.1.jar")
+
+    sql_server = os.path.join(taf_july,"jars","mssql-jdbc-13.4.0.jre11.jar")
+
+    jar_path = ",".join([azure_storage,hadoop_azure,sql_server])
+
+    print("\nStarting Spark Session")
+    print("Project Path :", taf_july)
+    print("Jar Path :", jar_path)
+
+    spark = (
+        SparkSession.builder
+        .master("local[1]")
+        .config("spark.jars", jar_path)
+        .config("spark.driver.extraClassPath", jar_path)
+        .config("spark.executor.extraClassPath", jar_path)
+        .appName("ETL Automation FW")
+        .getOrCreate()
     )
 
-    sql_server_jar = os.path.join(taf_path, "jars", "mssql-jdbc-13.4.0.jre11.jar")
+    print("Spark Version :", spark.version)
 
-    spark = SparkSession.builder \
-        .master("local[1]") \
-        .config("spark.jars", sql_server_jar) \
-        .config("spark.driver.extraClassPath", sql_server_jar) \
-        .config("spark.executor.extraClassPath", sql_server_jar) \
-        .appName("etl automation framework") \
-        .getOrCreate()
+    adls_account_name = os.getenv(
+        "ADLS_ACCOUNT_NAME"
+    )
 
-    return spark
+    key = os.getenv(
+        "ADLS_TOKEN"
+    )
+
+    spark.conf.set(
+        f"fs.azure.account.auth.type.{adls_account_name}.dfs.core.windows.net",
+        "SharedKey"
+    )
+
+    spark.conf.set(
+        f"fs.azure.account.key.{adls_account_name}.dfs.core.windows.net",
+        key
+    )
+
+    yield spark
+
+    print("\nStopping Spark Session")
+
+    #spark.stop()
+
 
 @pytest.fixture(scope="module")
 def read_data( read_config, spark_session):
@@ -57,7 +96,7 @@ def read_data( read_config, spark_session):
         source = read_db(spark=spark,
                          config=source_config,
                          dir_path=dir_path)
-        pass
+
     else:
         source = read_file(spark=spark,
                            file_type = source_config['type'],
@@ -69,7 +108,7 @@ def read_data( read_config, spark_session):
         target = read_db(spark=spark,
                 config=target_config,
                 dir_path=dir_path)
-        pass
+
     else:
         target = read_file(spark=spark,
                            file_type = target_config['type'],
@@ -77,7 +116,13 @@ def read_data( read_config, spark_session):
                            file_config = target_config['file_config'],
                            dir_path = dir_path )
 
+    source= source.drop(
+        *source_config.get("exclude_cols", [])
+    )
 
+    target = target.drop(
+        *target_config.get("exclude_cols", [])
+    )
 
     return source, target
 TEST_STATS = {

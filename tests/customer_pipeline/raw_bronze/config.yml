@@ -1,0 +1,20 @@
+source_config:
+  path: "abfss://raw@strqafalconstorage.dfs.core.windows.net/customer/"
+  type: "csv"
+  file_config:
+    schema: "N"
+    header: True
+    sep: ","
+    inferSchema: True
+
+target_config:
+  type: "database"
+  transformation : ["N","NA"]
+  table: "[bronze].[CustomerLanding]"
+  env: "qa"
+  exclude_cols: ['HashKey','SourceFileName','InsertDate','rn']
+validation_config:
+  key_columns: ['customer_id']
+  primary_keys: ['customer_id']
+  unique_cols: ['customer_id', 'email']
+  not_null_cols: ['customer_id', 'phone']
