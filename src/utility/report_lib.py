@@ -1,11 +1,16 @@
 import csv
-import threading
-from src.core.run_context import get_run_id, get_report_dir, get_log_dir
-from datetime import datetime
 import html
-# _name private variable
-# __name strict private variable oops(class and objects)
-# _function private function ( local to this specific python module file)
+import threading
+from datetime import datetime
+
+from src.core.run_context import get_report_dir, get_run_id
+
+
+REPORT_DIR = get_report_dir()
+
+CSV_REPORT = REPORT_DIR / "validation_report.csv"
+HTML_REPORT = REPORT_DIR / "validation_report.html"
+SUMMARY_REPORT = REPORT_DIR / "summary.txt"
 
 _lock = threading.Lock()
 
@@ -19,11 +24,6 @@ HEADERS = [
     "details"
 ]
 
-REPORT_DIR = get_report_dir()
-
-CSV_REPORT = REPORT_DIR / "validation_report.csv"
-HTML_REPORT = REPORT_DIR / "validation_report.html"
-SUMMARY_REPORT = REPORT_DIR / "summary.txt"
 
 def _create_report():
 
@@ -39,18 +39,25 @@ def _create_report():
         writer = csv.writer(file)
         writer.writerow(HEADERS)
 
-def write_output(validation_type,
+
+def write_output(
+        validation_type,
         status,
-        duration_seconds,
-        details):
+        details="",
+        duration_seconds=None
+):
+
+
     with _lock:
+
         _create_report()
 
         with CSV_REPORT.open(
-                mode="a",
-                newline="",
-                encoding="utf-8"
+            mode="a",
+            newline="",
+            encoding="utf-8"
         ) as file:
+
             writer = csv.writer(file)
 
             writer.writerow([
@@ -63,6 +70,7 @@ def write_output(validation_type,
                 duration_seconds,
                 details
             ])
+
 
 def _read_validation_results():
 
@@ -78,6 +86,7 @@ def _read_validation_results():
         return list(
             csv.DictReader(file)
         )
+
 
 def generate_summary(test_stats):
 
@@ -803,3 +812,4 @@ def generate_html_report(test_stats):
         report_html,
         encoding="utf-8"
     )
+

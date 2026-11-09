@@ -1,36 +1,47 @@
-
 import time
+
 from src.utility.report_lib import write_output
 
-def count_check(source, target):
+
+def count_check(source_df, target_df, key_columns=None):
+
     start_time = time.perf_counter()
-    src_cnt = source.count()
-    tgt_cnt = target.count()
+
+    # Count source and target records
+    src_cnt = source_df.count()
+    tgt_cnt = target_df.count()
+
+    # Calculate count difference
     difference = abs(src_cnt - tgt_cnt)
 
-    if difference == 0:
+    # Validate counts
+    if src_cnt == tgt_cnt:
+
         status = "PASS"
 
-        details ={
+        details = (
             f"Source={src_cnt}, "
             f"Target={tgt_cnt}, "
             f"Difference=0"
-        }
+        )
+
     else:
+
         status = "FAIL"
 
-        details ={
+        details = (
             f"Source={src_cnt}, "
             f"Target={tgt_cnt}, "
             f"Difference={difference}"
-        }
+        )
+
+    # Calculate execution duration
     duration = round(
         time.perf_counter() - start_time,
         3
     )
 
-    print("count func duration: ", duration)
-
+    # Write validation result to report
     write_output(
         validation_type="Count Check",
         status=status,
@@ -38,4 +49,4 @@ def count_check(source, target):
         details=details
     )
 
-    return status, src_cnt, tgt_cnt
+    return status
